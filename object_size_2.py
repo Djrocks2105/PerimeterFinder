@@ -2,14 +2,13 @@ from scipy.spatial import distance as dist
 from imutils import perspective
 from imutils import contours
 import numpy as np
-import argparse
+import argparse,math
 import imutils
 import cv2
 import pickle
 import settings,os
 def midpoint(ptA, ptB):
 	return ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
-
 def image_resize(image, width = None, height = None, inter = cv2.INTER_AREA):
     # initialize the dimensions of the image to be resized and
     # grab the image size
@@ -52,7 +51,11 @@ with open(settings.CALIB_FILE_NAME, 'rb') as f:
     calib_data = pickle.load(f)
     mtx = calib_data["cam_matrix"]
     dist_coeffs = calib_data["dist_coeffs"]
+newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist_coeffs, (3008,4016), 1, (3008,4016))
 # load the image, convert it to grayscale, and blur it slightly
+#Here pixelpermetric is based on the first refrence card width that is found to check it for all image move it inside
+#the loop but be sure that every image then has a card placed on the leftmost portion
+pixelsPerMetric = None
 for image_file in os.listdir(args["image"]):
         if image_file.endswith("jpg"):
             image = cv2.imread(os.path.join(args["image"], image_file))
@@ -61,40 +64,46 @@ for image_file in os.listdir(args["image"]):
             print(image_file)
             # for i in range(2):
             #     image=cv2.pyrDown(image)
-            image=cv2.undistort(image, mtx, dist_coeffs)
-            # cv2.imshow("ss",image)
+            image = cv2.undistort(image, mtx, dist_coeffs, None, newcameramtx)
+# crop the image
+            x, y, w, h = roi
+            image = image[y:y+h, x:x+w]
+            # cv2.imshow("image",image)
             # cv2.waitKey(0)
             # cv2.imwrite("img1.png",image)
             # cv2.destroyAllWindows()
             # print(image.shape)
             # image=cv2.pyrDown(image)
             # print(image.shape)
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)[:,:,1] #this one shows good results best results till now.
+            # gray = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)[:,:,0] #this one shows good results best results till now.
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #this one shows good results best results till now.
 
-            cv2.imshow("image",gray)
-            cv2.waitKey(0)
-            gray = cv2.GaussianBlur(gray, (19, 19), 0)
-            cv2.imshow("image",gray)
-            cv2.waitKey(0)
-            # cv2.imwrite("img1.png",gray)
-            # cv2.destroyAllWindows()
-            ret,gray=cv2.threshold(gray,115,255,cv2.THRESH_BINARY)
+            # cv2.imshow("image",gray)
+            # cv2.waitKey(0)
+            gray = cv2.GaussianBlur(gray, (11, 11), 0)
+            # cv2.imshow("image",gray)
+            # cv2.waitKey(0)
+            # # cv2.imwrite("img1.png",gray)
+            # # cv2.destroyAllWindows()
+            # # ret,gray=cv2.threshold(gray,125,255,cv2.THRESH_BINARY)
+            # ret,gray=cv2.threshold(gray,90,255,cv2.THRESH_BINARY)
+
             # gray = cv2.bitwise_not(gray)
-            cv2.imshow("image",gray)
-            cv2.waitKey(0)
+            # cv2.imshow("image",gray)
+            # cv2.waitKey(0)
             # cv2.imwrite("img1.png",gray)
-            # cv2.destroyAllWindows()
+            # cv2.destroyAllWindows(
             # perform edge detection, then perform a dilation + erosion to
             # close gaps in between object edges
             edged = cv2.Canny(gray, 50, 100)
-            cv2.imshow("image",edged)
-            cv2.waitKey(0)
-            edged = cv2.dilate(edged, None, iterations=8)
-            cv2.imshow("image",edged)
-            cv2.waitKey(0)
-            edged = cv2.erode(edged, None, iterations=8)
-            cv2.imshow("image",edged)
-            cv2.waitKey(0)
+            # cv2.imshow("image",edged)
+            # cv2.waitKey(0)
+            edged = cv2.dilate(edged, None, iterations=40)
+            # cv2.imshow("image",edged)
+            # cv2.waitKey(0)
+            edged = cv2.erode(edged, None, iterations=40)
+            # cv2.imshow("image",edged)
+            # cv2.waitKey(0)
             # cv2.imwrite("img2.png",edged)
             # cv2.destroyAllWindows()
             # find contours in the edge map
@@ -105,15 +114,37 @@ for image_file in os.listdir(args["image"]):
             # sort the contours from left-to-right and initialize the
             # 'pixels per metric' calibration variable
             (cnts, _) = contours.sort_contours(cnts)
-            pixelsPerMetric = None
-            i=3
+            # test = gray.copy()
+            # print(test.shape)
+            # mask = np.zeros_like(test) # Create mask where white is what we want, black otherwise
+            # cv2.drawContours(mask, cnts,-1, 255,-1) # Draw filled contour in mask
+            # out = np.zeros_like(test) # Extract out the object and place into output image
+            # out[mask == 255] = test[mask == 255]
+            # ret,out=cv2.threshold(out,200,255,cv2.THRESH_BINARY)
+            # cnts = cv2.findContours(out, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            # cnts = imutils.grab_contours(cnts)
+            #
+            # # sort the contours from left-to-right and initialize the
+            # # 'pixels per metric' calibration variable
+            # (cnts, _) = contours.sort_contours(cnts)
+            # # #Now crop
+            # # (y, x) = np.where(mask == 255)
+            # # (topy, topx) = (np.min(y), np.min(x))
+            # # (bottomy, bottomx) = (np.max(y), np.max(x))
+            # # out = out[topy:bottomy+1, topx:bottomx+1]
+            #
+            # # Show the output image
+            # cv2.imshow('image', out)
+            # cv2.waitKey(0)
             for c in cnts:
-                if i<=4:
-                    i=i+1
-                    continue
+                # if i<=3:
+                #     i=i+1
+                #     continue
                 # if the contour is not sufficiently large, ignore it
-                if cv2.contourArea(c) < 1117:
+                if cv2.contourArea(c) < 60025:
                     continue
+                #For croping out the images for more pixel accuracy
+
 
                 # compute the rotated bounding box of the contour
                 orig = image.copy()
@@ -126,12 +157,14 @@ for image_file in os.listdir(args["image"]):
                 # order, then draw the outline of the rotated bounding
                 # box
                 box = perspective.order_points(box)
-                cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
-
-                # loop over the original points and draw them
-                for (x, y) in box:
-                    cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
-
+                # cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
+                # # loop over the original points and draw them
+                # for (x, y) in box:
+                #     cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
                 # unpack the ordered bounding box, then compute the midpoint
                 # between the top-left and top-right coordinates, followed by
                 # the midpoint between bottom-left and bottom-right coordinates
@@ -145,14 +178,18 @@ for image_file in os.listdir(args["image"]):
                 (trbrX, trbrY) = midpoint(tr, br)
 
                 # draw the midpoints on the image
-                cv2.circle(orig, (int(tltrX), int(tltrY)), 5, (255, 0, 0), -1)
-                cv2.circle(orig, (int(blbrX), int(blbrY)), 5, (255, 0, 0), -1)
-                cv2.circle(orig, (int(tlblX), int(tlblY)), 5, (255, 0, 0), -1)
-                cv2.circle(orig, (int(trbrX), int(trbrY)), 5, (255, 0, 0), -1)
-
-                # draw lines between the midpoints
-                cv2.line(orig, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)),(255, 0, 255), 2)
-                cv2.line(orig, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)),(255, 0, 255), 2)
+                # cv2.circle(orig, (int(tltrX), int(tltrY)), 5, (255, 0, 0), -1)
+                # cv2.circle(orig, (int(blbrX), int(blbrY)), 5, (255, 0, 0), -1)
+                # cv2.circle(orig, (int(tlblX), int(tlblY)), 5, (255, 0, 0), -1)
+                # cv2.circle(orig, (int(trbrX), int(trbrY)), 5, (255, 0, 0), -1)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
+                #
+                # # draw lines between the midpoints
+                # cv2.line(orig, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)),(255, 0, 255), 2)
+                # cv2.line(orig, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)),(255, 0, 255), 2)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
 
                 # compute the Euclidean distance between the midpoints
                 dA = dist.euclidean((tltrX, tltrY), (blbrX, blbrY))
@@ -166,6 +203,7 @@ for image_file in os.listdir(args["image"]):
                 # (in this case, inches)
                 if pixelsPerMetric is None:
                     pixelsPerMetric = dB / args["width"]
+                    # print("kjnffhf=----------------------------",pixelsPerMetric)
 
                 # compute the size of the object
                 dimA = dA / pixelsPerMetric
@@ -179,11 +217,21 @@ for image_file in os.listdir(args["image"]):
                 draw=image.copy()
                 cv2.drawContours(draw,c,-1,(255,255,0),3)
                 perimeter = cv2.arcLength(c, True)
-                perimeter = perimeter / pixelsPerMetric
-                cv2.putText(draw, "{:.3f}".format(perimeter),(int(tltrX-50), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,0.65, (255, 0, 255), 2)
+                print(perimeter)
+                perimeterpix = perimeter / pixelsPerMetric
+                cv2.putText(draw, "{:.3f}".format(perimeterpix),(int(tltrX-50), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,4.5, (255, 0, 255),15)
+                # Uncomment below lines if you want to show the images and then if you want to save them press s while runtime
                 cv2.imshow("image",draw)
-                # cv2.imwrite("img"+str(i)+".png",draw)
-                cv2.waitKey(0)
-                i=i+1
+                if cv2.waitKey(0)==ord('s'):
+                    count = 0
+                    while os.path.isfile("outputs/img"+str(count)+"_"+str(int(perimeter))+".png"):  # increase number until file not exists
+                        count += 1
+                    cv2.imwrite("outputs/img"+str(count)+"_"+str(int(perimeter))+".png",draw)
+                #Uncomment below lines if you want to save directly without showing the images
+                # count = 0
+                # while os.path.isfile("outputs/img"+str(count)+"_"+str(int(perimeter))+".png"):  # increase number until file not exists
+                #     count += 1
+                # cv2.imwrite("outputs/img"+str(count)+"_"+str(int(perimeter))+".png",draw)
+                # i=i+1
                 # cv2.imshow("Image", orig)
                 # cv2.waitKey(0)

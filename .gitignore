@@ -1,3 +1,9 @@
 .vscode/
 */.vscode/*
 .vscode/*
+holes/*
+images/*
+output holes/*
+outputs/*
+parts done/*
+*.pyc

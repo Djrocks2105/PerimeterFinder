@@ -69,32 +69,33 @@ for image_file in os.listdir(args["image"]):
             # print(image.shape)
             # image=cv2.pyrDown(image)
             # print(image.shape)
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)[:,:,1] #this one shows good results best results till now.
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)[:,:,0] #this one shows good results best results till now.
+            # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #this one shows good results best results till now.
 
-            cv2.imshow("image",gray)
-            cv2.waitKey(0)
-            gray = cv2.GaussianBlur(gray, (19, 19), 0)
-            cv2.imshow("image",gray)
-            cv2.waitKey(0)
+            # cv2.imshow("image",gray)
+            # cv2.waitKey(0)
+            gray = cv2.GaussianBlur(gray, (9, 9), 0)
+            # cv2.imshow("image",gray)
+            # cv2.waitKey(0)
             # cv2.imwrite("img1.png",gray)
             # cv2.destroyAllWindows()
-            ret,gray=cv2.threshold(gray,115,255,cv2.THRESH_BINARY)
-            # gray = cv2.bitwise_not(gray)
-            cv2.imshow("image",gray)
-            cv2.waitKey(0)
+            ret,gray=cv2.threshold(gray,125,255,cv2.THRESH_BINARY)
+            gray = cv2.bitwise_not(gray)
+            # cv2.imshow("image",gray)
+            # cv2.waitKey(0)
             # cv2.imwrite("img1.png",gray)
             # cv2.destroyAllWindows()
             # perform edge detection, then perform a dilation + erosion to
             # close gaps in between object edges
             edged = cv2.Canny(gray, 50, 100)
-            cv2.imshow("image",edged)
-            cv2.waitKey(0)
-            edged = cv2.dilate(edged, None, iterations=8)
-            cv2.imshow("image",edged)
-            cv2.waitKey(0)
-            edged = cv2.erode(edged, None, iterations=8)
-            cv2.imshow("image",edged)
-            cv2.waitKey(0)
+            # cv2.imshow("image",edged)
+            # cv2.waitKey(0)
+            edged = cv2.dilate(edged, None, iterations=5)
+            # cv2.imshow("image",edged)
+            # cv2.waitKey(0)
+            edged = cv2.erode(edged, None, iterations=5)
+            # cv2.imshow("image",edged)
+            # cv2.waitKey(0)
             # cv2.imwrite("img2.png",edged)
             # cv2.destroyAllWindows()
             # find contours in the edge map
@@ -126,12 +127,14 @@ for image_file in os.listdir(args["image"]):
                 # order, then draw the outline of the rotated bounding
                 # box
                 box = perspective.order_points(box)
-                cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
-
-                # loop over the original points and draw them
-                for (x, y) in box:
-                    cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
-
+                # cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
+                # # loop over the original points and draw them
+                # for (x, y) in box:
+                #     cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
                 # unpack the ordered bounding box, then compute the midpoint
                 # between the top-left and top-right coordinates, followed by
                 # the midpoint between bottom-left and bottom-right coordinates
@@ -145,14 +148,18 @@ for image_file in os.listdir(args["image"]):
                 (trbrX, trbrY) = midpoint(tr, br)
 
                 # draw the midpoints on the image
-                cv2.circle(orig, (int(tltrX), int(tltrY)), 5, (255, 0, 0), -1)
-                cv2.circle(orig, (int(blbrX), int(blbrY)), 5, (255, 0, 0), -1)
-                cv2.circle(orig, (int(tlblX), int(tlblY)), 5, (255, 0, 0), -1)
-                cv2.circle(orig, (int(trbrX), int(trbrY)), 5, (255, 0, 0), -1)
-
-                # draw lines between the midpoints
-                cv2.line(orig, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)),(255, 0, 255), 2)
-                cv2.line(orig, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)),(255, 0, 255), 2)
+                # cv2.circle(orig, (int(tltrX), int(tltrY)), 5, (255, 0, 0), -1)
+                # cv2.circle(orig, (int(blbrX), int(blbrY)), 5, (255, 0, 0), -1)
+                # cv2.circle(orig, (int(tlblX), int(tlblY)), 5, (255, 0, 0), -1)
+                # cv2.circle(orig, (int(trbrX), int(trbrY)), 5, (255, 0, 0), -1)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
+                #
+                # # draw lines between the midpoints
+                # cv2.line(orig, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)),(255, 0, 255), 2)
+                # cv2.line(orig, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)),(255, 0, 255), 2)
+                # cv2.imshow("image",orig)
+                # cv2.waitKey(0)
 
                 # compute the Euclidean distance between the midpoints
                 dA = dist.euclidean((tltrX, tltrY), (blbrX, blbrY))
